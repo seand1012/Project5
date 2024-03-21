@@ -8,6 +8,8 @@
 #include "proc.h"
 #include "mutex.h"
 
+Ptable my_ptable;
+
 int
 sys_fork(void)
 {
@@ -144,12 +146,21 @@ sys_mrelease(void){
 
 int
 sys_nice(void){
-  // int inc;
-  // struct proc *p = myproc();
-  // if(argint(0, &inc) < 0){
-  //   return -1;
-  // }
+  int inc;
+  struct proc *p = myproc();
+  if(argint(0, &inc) < 0){
+    return -1;
+  }
+  if(inc > 19)
+    inc = 19;
+  if(inc < -20)
+    inc = -20;
 
+  //acquire(&m->lock);
+  acquire(&my_ptable.lock);
+  p->nice += inc;
+  release(&my_ptable.lock);
+  //release(&m->lock);
 
   return 0;
 }
