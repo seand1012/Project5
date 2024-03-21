@@ -395,19 +395,29 @@ void
 scheduler(void)
 {
   struct proc *p;
+  
   struct cpu *c = mycpu();
   c->proc = 0;
   
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
+    
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    struct proc *lowest_nice = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      
       if(p->state != RUNNABLE)
         continue;
 
+      if(lowest_nice == 0 || p->nice < lowest_nice->nice){
+        lowest_nice = p;
+      }
+    }
+    
+    if(lowest_nice != 0){
+      p = lowest_nice;
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
