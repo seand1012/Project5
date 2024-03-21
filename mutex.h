@@ -1,7 +1,8 @@
 #include "spinlock.h"
 // mutex struct
 typedef struct{
-  int isLocked;
-  struct spinlock* lock;
-  struct proc* owner;
+  uint isLocked;
+  struct spinlock lock;
+  // For debugging: 
+  // struct proc* owner;
 }mutex;

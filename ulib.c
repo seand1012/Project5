@@ -108,7 +108,8 @@ memmove(void *vdst, const void *vsrc, int n)
 
 void
 minit(mutex* m){
-  m->lockstate = 0; // 0 is unlocked, 1 is locked
-  //initlock(m->s, "new lock");
-  
+  m->isLocked = 0; // 0 is unlocked, 1 is locked
+  m->lock.name = "mylock";
+  m->lock.locked = 0;
+  m->lock.cpu = (void*)0;
 }
