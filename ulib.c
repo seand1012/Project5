@@ -112,4 +112,8 @@ minit(mutex* m){
   m->lock.name = "mylock";
   m->lock.locked = 0;
   m->lock.cpu = (void*)0;
+  m->pid = getpid();
+  for(int i = 0; i < 64; i++){
+    m->waiting_procs[i] = 0;
+  }
 }

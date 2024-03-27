@@ -1,8 +1,10 @@
 #include "types.h"
+#include "mutex.h"
 #ifndef PROC
 #define PROC
 
 #define MAXPROCNAMELEN 16
+#define MAX_LOCKS_HELD 16
 #include "spinlock.h"
 
 // Per-CPU state
@@ -58,7 +60,8 @@ struct proc {
   char name[MAXPROCNAMELEN];               // Process name (debugging)
   int nclone;                  // Number of clone calls on this proc (for grading)
   int sleepticks;              // Number of ticks left the process should sleep for
-  int nice;
+  int nice;                    // Priority for scheduler [-20, 19] inclusive
+  mutex *locks_held[MAX_LOCKS_HELD]; // array of locks this process holds
 };
 typedef struct {
   struct spinlock lock;

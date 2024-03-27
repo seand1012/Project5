@@ -3,6 +3,7 @@
 typedef struct{
   uint isLocked;
   struct spinlock lock;
+  struct proc *waiting_procs[64];
   // For debugging: 
-  // struct proc* owner;
+  int pid;
 }mutex;

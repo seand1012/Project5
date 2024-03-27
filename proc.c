@@ -94,6 +94,9 @@ found:
   p->sleepticks = -1;
   p->chan = 0;
   p->nice = 0;
+  for(int i = 0; i < 16; i++){
+    p->locks_held[i] = 0;
+  }
 
   release(&ptable.lock);
 
@@ -400,12 +403,15 @@ scheduler(void)
   
   for(;;){
     int least_nice = 20;
+    //int temp_nice;
+    //int old_nice = 20;
     // Enable interrupts on this processor.
     sti();
     
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    //struct proc *lowest_nice = 0;
+
+    // Loop over process table to find least nice runnable process
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
@@ -413,14 +419,29 @@ scheduler(void)
         least_nice = p->nice;
       }
     }
-    
+    //temp_nice = least_nice;
+    // Loop over proc table to schedule the next process
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE) continue;
       if(p->nice == least_nice){
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
+        for(int i = 0; i < 16; i++){
+          if(p->locks_held[i] != 0){
+            for(int j = 0; j < 64; j++){
+              if(p->locks_held[i]->waiting_procs[j] != 0){
+                // if(p->locks_held[i]->waiting_procs[j]->nice < temp_nice){
+                //   // set temporary nice value
+                //   // temp_nice = p->locks_held[i]->waiting_procs[j]->nice;
+                // }
+              }
+            }
+          }
+        }
         c->proc = p;
+        // old_nice = c->proc->nice;
+        // c->proc->nice = temp_nice;
         switchuvm(p);
         p->state = RUNNING;
 
@@ -429,6 +450,7 @@ scheduler(void)
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
+        // c->proc->nice = old_nice;
         c->proc = 0;
       }
     }
