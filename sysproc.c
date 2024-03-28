@@ -115,8 +115,14 @@ sys_macquire(void){
     return -1;
   }
   acquire(&m->lock);
-
-  while(m->isLocked == 1){
+  //m->pid = sys_getpid();
+  if(m->isLocked == 1){
+    for(int i = 0; i < NPROC; i++){
+      if(m->waiting_procs[i] == 0){
+        m->waiting_procs[i] = myproc();
+        break;
+      }
+    }
     sleep(m, &m->lock);
   }
 
@@ -139,7 +145,13 @@ sys_mrelease(void){
   m->isLocked = 0;
   //m->lock->cpu = (void*)0;
   wakeup(m);
-
+  //sys_setnice(19);
+  for(int i = 0; i < NPROC; i++){
+    if(m->waiting_procs[i] == myproc()){
+      m->waiting_procs[i] = 0;
+      break;
+    }
+  }
   release(&m->lock);
   return 0;
 }
@@ -162,5 +174,24 @@ sys_nice(void){
   release(&my_ptable.lock);
   //release(&m->lock);
 
+  return 0;
+}
+
+int
+sys_getnice(void){
+  struct proc *p = myproc();
+  return p->nice;
+}
+
+int sys_setnice(void){
+  int n;
+  if(argint(1, &n) < 0){
+    return -1;
+  }
+  struct proc* p;
+  if(argptr(0, (void*)&p, sizeof(*p) != 0)){
+    return -1;
+  }
+  p->nice = n;
   return 0;
 }
