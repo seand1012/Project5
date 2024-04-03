@@ -95,6 +95,7 @@ found:
   p->chan = 0;
   p->nice = 0;
   p->temp_nice = 100;
+  p->changed = 0;
   for(int i = 0; i < 16; i++){
     p->locks_held[i] = 0;
   }
@@ -399,40 +400,44 @@ void
 scheduler(void)
 {
   struct proc *p;
-  // struct proc *elevated_p;  // lock holding proc
   struct cpu *c = mycpu();
   c->proc = 0;
   
   for(;;){
     int least_nice = 20;
-    int min_temp_nice = least_nice;
     // Enable interrupts on this processor.
     sti();
     
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-
     // Loop over process table to find least nice runnable process
+    // loop 1
+    // finds least nice
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-      else if(p->nice < least_nice){
+      
+      if(p->nice < least_nice){
         least_nice = p->nice;
       }
+    }
 
-      // loop over every waiting process and find the hightest priority process
-      // waiting for a lock
-      for (int i = 0; i < 16; i++)
-      {
-        if (p->locks_held[i] != 0)
-        {
-          for (int j = 0; j < 64; j++)
-          {
-            if (p->locks_held[i]->waiting_procs[j] != 0)
-            {
-              if (p->locks_held[i]->waiting_procs[j]->nice < p->nice)
-              { // set elevated nice value
-                min_temp_nice = p->locks_held[i]->waiting_procs[j]->nice;
+    // loop over every waiting process and find the hightest priority process
+    // waiting for a lock
+    // loop 2
+    // elevation
+    // updates temp_nice
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      for (int i = 0; i < 16; i++){
+        if (p->locks_held[i] != 0){
+          for (int j = 0; j < 64; j++){
+            if (p->locks_held[i]->waiting_procs[j] != 0){
+              if (p->locks_held[i]->waiting_procs[j]->nice < p->nice){ // set elevated nice value
+                if(p->changed == 0){
+                  p->temp_nice = p->nice; // stores original nice value
+                }
+                p->changed = 1;
+                p->nice = p->locks_held[i]->waiting_procs[j]->nice; // elevates nice value temporarily
               }
             }
           }
@@ -441,9 +446,10 @@ scheduler(void)
     }
 
     // Loop over proc table to schedule the next process
+    // Loop 3: scheduler
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE) continue;
-      if( (p->nice == min_temp_nice) || (p->nice == least_nice) ){
+      if((p->nice == least_nice) ){
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
@@ -453,12 +459,18 @@ scheduler(void)
         p->state = RUNNING;
         swtch(&(c->scheduler), p->context);
         switchkvm();
-
+        if(p->changed == 1){
+          p->nice = p->temp_nice; // restores original nice value
+          p->changed = 0;
+        }
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
+        
       }
+      
     }
+
     release(&ptable.lock);
   }
 }
